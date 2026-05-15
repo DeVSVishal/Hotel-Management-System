@@ -32,7 +32,7 @@ bun install
 bunx prisma migrate dev --name init
 
 # 3. (Optional) Seed mock data
-bunx tsx server/seed.ts
+bun run db:seed
 
 # 4. Start the dev server
 bun dev
@@ -61,13 +61,19 @@ hms-app/
 │   │   └── css/
 │   │       └── main.css          # Tailwind v4 + Nuxt UI imports, global styles
 │   ├── components/               # Vue components (auto-imported)
+│   │   ├── ui/                   # Shared/reusable UI components
+│   │   │   ├── AppNavbar.vue     # Top navbar with profile dropdown
+│   │   │   └── AppSidebar.vue    # Role-based sidebar navigation
 │   │   ├── booking/              # Booking-related components
 │   │   ├── room/                 # Room-related components
-│   │   ├── ui/                   # Shared/reusable UI components
+│   ├── composables/              # Auto-imported composables
+│   │   └── useAuth.ts            # Auth helpers (role checks, login/logout/register)
+│   ├── layout.vue                # Root layout with role-aware navigation
 │   ├── pages/                    # File-based routes
-│   │   ├── index.vue             # Homepage (room search)
+│   │   ├── index.vue             # Homepage
 │   │   ├── login.vue             # Login page
 │   │   ├── register.vue          # Registration page
+│   │   ├── change-password.vue   # Forced password change
 │   │   ├── guest/                # Guest-only pages
 │   │   │   ├── bookings.vue
 │   │   │   └── profile.vue
@@ -77,23 +83,33 @@ hms-app/
 │   │   │   └── reports.vue
 │   │   └── admin/                # Admin-only pages
 │   │       ├── users.vue
-│   │       └── hotels.vue
+│   │       └── users/
+│   │           └── [id].vue
 ├── server/                       # Backend (Nuxt server)
 │   ├── api/                      # API routes (Nitro handlers)
 │   │   ├── auth/
-│   │   │   ├── login.post.ts
-│   │   │   ├── register.post.ts
-│   │   │   └── logout.post.ts
+│   │   │   ├── login.post.ts     # Login with lockout + password expiry
+│   │   │   ├── register.post.ts  # Registration with password policy
+│   │   │   ├── logout.post.ts    # Clear session
+│   │   │   └── session.get.ts    # Return current user session
+│   │   ├── users/
+│   │   │   └── [id].get.ts       # View profile
+│   │   │   └── [id].put.ts       # Update profile / change password
+│   │   ├── admin/
+│   │   │   └── users/
+│   │   │       ├── index.get.ts    # List all users
+│   │   │       ├── [id].put.ts     # Update user / unlock
+│   │   │       └── [id].delete.ts  # Delete user
 │   │   ├── rooms/
 │   │   ├── bookings/
-│   │   ├── users/
 │   │   └── reports/
 │   ├── middleware/               # Server middleware (RBAC guard)
 │   │   └── auth.ts
 │   ├── utils/                    # Shared server utilities
 │   │   ├── prisma.ts             # Prisma client singleton
-│   │   ├── auth.ts               # Password hashing, validation
+│   │   ├── auth.ts               # Password validation
 │   │   └── billing.ts            # Fee calculation, invoice total
+│   └── seed.ts                   # Test data seeder
 ├── prisma/
 │   ├── schema.prisma             # Database schema (models, enums)
 │   └── migrations/               # Migration history
@@ -269,11 +285,22 @@ await prisma.$transaction([
 
 ### Seeding test data
 
-Create a `server/seed.ts` and run with:
+The seed script creates 3 hotels (London, Paris, New York), 12 rooms, and one user per role:
+
+| Role | Email | Password |
+|------|-------|----------|
+| ADMIN | `admin@admin.com` | `Admin123!` |
+| MANAGER | `manager@manager.com` | `Manager1!` |
+| STAFF | `staff@staff.com` | `Staff123!` |
+| GUEST | `guest@guest.com` | `Guest123!` |
+
+Run with:
 
 ```bash
-bunx tsx server/seed.ts
+bun run db:seed
 ```
+
+> Re-run after resetting the DB: `rm dev.db && bunx prisma migrate dev --name init && bun run db:seed`
 
 ### Viewing data in the browser
 
@@ -289,87 +316,44 @@ Opens a visual DB editor at `http://localhost:5555`.
 
 We use `nuxt-auth-utils` which stores sessions in encrypted cookies (no DB table needed).
 
-### Login flow (server-side)
+### Security features
 
-```ts
-// server/api/auth/login.post.ts
-import prisma from '../../utils/prisma'
-
-export default defineEventHandler(async (event) => {
-  const { email, password } = await readBody(event)
-
-  const user = await prisma.user.findUnique({ where: { email } })
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'Invalid credentials' })
-  }
-
-  // Check lockout
-  if (user.lockedUntil && user.lockedUntil > new Date()) {
-    throw createError({ statusCode: 423, message: 'Account locked' })
-  }
-
-  // verifyPassword is auto-imported from nuxt-auth-utils
-  const valid = await verifyPassword(user.passwordHash, password)
-  if (!valid) {
-    // Increment failed attempts
-    const attempts = user.failedLoginAttempts + 1
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        failedLoginAttempts: attempts,
-        lockedUntil: attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null,
-      },
-    })
-    throw createError({ statusCode: 401, message: 'Invalid credentials' })
-  }
-
-  // Reset lockout on success
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { failedLoginAttempts: 0, lockedUntil: null },
-  })
-
-  // Set session
-  await replaceUserSession(event, {
-    user: { id: user.id, email: user.email, name: user.name, role: user.role },
-  })
-
-  return { message: 'Logged in' }
-})
-```
+| Feature | Details |
+|---------|---------|
+| **Password policy** | Min 8 chars, uppercase, lowercase, number, special character |
+| **Account lockout** | Locked after 5 failed attempts, released after 15 minutes |
+| **Password expiry** | Admin/Manager forced to change password every 6 months |
+| **Auto-logout** | Session cleared after 15 minutes of inactivity (client-side timer) |
+| **RBAC** | 4 roles: GUEST, STAFF, MANAGER, ADMIN — enforced by server middleware |
+| **Audit logging** | All logins and API access logged to `AuditLog` table |
 
 ### Reading the session (client-side)
 
 ```vue
 <script setup lang="ts">
-const { loggedIn, user, session, clear } = useUserSession()
+const { loggedIn, user } = useUserSession()
+</script>
+```
+
+Or with the convenience composable:
+
+```vue
+<script setup lang="ts">
+const { isAdmin, isStaff, isGuest, login, logout } = useAuth()
 </script>
 ```
 
 ### Protecting API routes (server middleware)
 
-```ts
-// server/middleware/auth.ts
-export default defineEventHandler(async (event) => {
-  const { user } = await getUserSession(event)
+The global middleware at `server/middleware/auth.ts` enforces RBAC:
 
-  // Public routes
-  if (event.path.startsWith('/api/auth') || event.path === '/') {
-    return
-  }
-
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'Not authenticated' })
-  }
-
-  // RBAC: role-based guards
-  if (event.path.startsWith('/api/admin') && user.role !== 'ADMIN') {
-    throw createError({ statusCode: 403, message: 'Forbidden' })
-  }
-
-  event.context.user = user
-})
-```
+| Path prefix | Required role |
+|-------------|--------------|
+| `/api/auth/*`, `/` | Public (no auth needed) |
+| `/api/admin/*` | ADMIN |
+| `/api/manager/*` | MANAGER or ADMIN |
+| `/api/staff/*` | STAFF, MANAGER, or ADMIN |
+| Everything else | Any authenticated user |
 
 ---
 
@@ -500,7 +484,7 @@ bun run test:watch    # Watch mode
 | `bun run lint` | Run ESLint |
 | `bunx prisma studio` | Open Prisma data viewer |
 | `bunx prisma migrate dev --name <name>` | Create & apply migration |
-| `bunx tsx server/seed.ts` | Seed mock data |
+| `bun run db:seed` | Seed mock data |
 
 ---
 
