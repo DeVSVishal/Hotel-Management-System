@@ -45,6 +45,18 @@ export default defineEventHandler(async (event) => {
     data: { failedLoginAttempts: 0, lockedUntil: null },
   })
 
+  const sixMonthsMs = 6 * 30 * 24 * 60 * 60 * 1000
+  const passwordExpired = ['ADMIN', 'MANAGER'].includes(user.role) &&
+    Date.now() - new Date(user.passwordChangedAt).getTime() > sixMonthsMs
+
+  if (passwordExpired) {
+    await replaceUserSession(event, {
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      passwordExpired: true,
+    })
+    return { passwordExpired: true }
+  }
+
   await replaceUserSession(event, {
     user: { id: user.id, email: user.email, name: user.name, role: user.role },
   })

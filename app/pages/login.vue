@@ -30,10 +30,16 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   loading.value = true
 
   try {
-    await $fetch('/api/auth/login', {
+    const res = await $fetch('/api/auth/login', {
       method: 'POST',
       body: event.data,
     })
+
+    if (res.passwordExpired) {
+      navigateTo('/change-password')
+      return
+    }
+
     await useUserSession().fetch()
     navigateTo('/')
   } catch (err: any) {
