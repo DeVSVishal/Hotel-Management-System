@@ -1,12 +1,12 @@
 import { getRequestIP } from 'h3'
 import prisma from '../utils/prisma'
 
-const PUBLIC_PATHS = ['/api/auth', '/']
+const PUBLIC_PATHS = ['/api/auth']
 
 export default defineEventHandler(async (event) => {
   const path = event.path
 
-  if (PUBLIC_PATHS.some((p) => path.startsWith(p))) {
+  if (path === '/' || PUBLIC_PATHS.some((p) => path.startsWith(p))) {
     return
   }
 

@@ -1,3 +1,4 @@
+import { getRequestIP } from 'h3'
 import prisma from '../../utils/prisma'
 
 export default defineEventHandler(async (event) => {
@@ -49,7 +50,7 @@ export default defineEventHandler(async (event) => {
   })
 
   await prisma.auditLog.create({
-    data: { userId: user.id, action: 'LOGIN', ipAddress: getIP(event) },
+    data: { userId: user.id, action: 'LOGIN', ipAddress: getRequestIP(event) },
   })
 
   return {

@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
   if (body.email !== undefined) data.email = body.email;
   if (body.role !== undefined) data.role = body.role;
   if (body.phone !== undefined) data.phone = body.phone;
+  if (body.hotelId !== undefined) data.hotelId = body.hotelId;
   if (body.unlock) {
     data.failedLoginAttempts = 0;
     data.lockedUntil = null;
