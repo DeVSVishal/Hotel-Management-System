@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../server/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  GUEST
+  STAFF
+  MANAGER
+  ADMIN
+}
+
+enum RoomType {
+  STANDARD_DOUBLE
+  DELUXE_KING
+  FAMILY_SUITE
+  PENTHOUSE
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+  OUT_OF_SERVICE
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+enum ServiceType {
+  AIRPORT_TRANSFER
+  BREAKFAST
+  SPA_ACCESS
+  LATE_CHECKOUT
+}
+
+model User {
+  id                  Int       @id @default(autoincrement())
+  email               String    @unique
+  passwordHash        String
+  name                String
+  role                Role      @default(GUEST)
+  phone               String?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  passwordChangedAt   DateTime  @default(now())
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  hotelId   Int?
+  hotel     Hotel?        @relation(fields: [hotelId], references: [id])
+  bookings  Booking[]
+  auditLogs AuditLog[]
+}
+
+model Hotel {
+  id      Int    @id @default(autoincrement())
+  name    String
+  city    String
+  country String
+
+  rooms Room[]
+  staff User[]
+}
+
+model Room {
+  id           Int        @id @default(autoincrement())
+  roomNumber   String
+  type         RoomType
+  capacity     Int
+  priceOffPeak Float
+  pricePeak    Float
+  status       RoomStatus @default(AVAILABLE)
+
+  hotelId Int
+  hotel   Hotel @relation(fields: [hotelId], references: [id])
+
+  bookingRooms BookingRoom[]
+
+  @@unique([hotelId, roomNumber])
+}
+
+model Booking {
+  id          Int           @id @default(autoincrement())
+  checkIn     DateTime
+  checkOut    DateTime
+  status      BookingStatus @default(CONFIRMED)
+  cancelledAt DateTime?
+
+  guestId Int
+  guest   User @relation(fields: [guestId], references: [id])
+
+  bookingRooms BookingRoom[]
+  services     BookingService[]
+  invoice      Invoice?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BookingRoom {
+  bookingId      Int
+  booking        Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  roomId         Int
+  room           Room    @relation(fields: [roomId], references: [id])
+  priceAtBooking Float
+
+  @@id([bookingId, roomId])
+}
+
+model BookingService {
+  id        Int         @id @default(autoincrement())
+  bookingId Int
+  booking   Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  service   ServiceType
+  quantity  Int         @default(1)
+  price     Float
+}
+
+model Invoice {
+  id          Int      @id @default(autoincrement())
+  bookingId   Int      @unique
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  totalAmount Float
+  paid        Boolean  @default(false)
+  issuedAt    DateTime @default(now())
+  paidAt      DateTime?
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
