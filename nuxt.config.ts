@@ -2,9 +2,12 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
 
+  components: [
+    { path: '~/components', pathPrefix: false },
+  ],
+
   modules: [
     "@nuxt/eslint",
-    "@nuxt/hints",
     "@nuxt/image",
     "@nuxt/test-utils",
     "@nuxt/ui",
@@ -13,6 +16,19 @@ export default defineNuxtConfig({
     "@nuxt/icon",
   ],
   css: ["~/assets/css/main.css"],
+
+  /* =======================================================
+        Force light mode app-wide. Nuxt UI ships
+        @nuxtjs/color-mode, which by default follows the
+        OS preference and applies a .dark class to <html>.
+        We pin it to light so the white + emerald palette
+        always wins regardless of the visitor's system.
+     ======================================================= */
+  colorMode: {
+    preference: 'light',
+    fallback: 'light',
+    classSuffix: '',
+  },
 
   fonts: {
     families: [

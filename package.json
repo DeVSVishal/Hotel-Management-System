@@ -7,7 +7,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
+    "postinstall": "prisma generate && nuxt prepare",
     "lint": "eslint .",
     "test": "vitest",
     "test:watch": "vitest --watch",
@@ -15,7 +15,8 @@
     "test:nuxt": "vitest --project nuxt",
     "db:migrate": "bunx prisma migrate dev",
     "db:studio": "bunx prisma studio",
-    "db:seed": "bunx tsx server/seed.ts"
+    "db:seed": "bun run server/seed.ts",
+    "db:setup": "bunx prisma migrate deploy && bun run server/seed.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",

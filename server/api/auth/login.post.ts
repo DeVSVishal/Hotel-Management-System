@@ -49,23 +49,31 @@ export default defineEventHandler(async (event) => {
   const passwordExpired = ['ADMIN', 'MANAGER'].includes(user.role) &&
     Date.now() - new Date(user.passwordChangedAt).getTime() > sixMonthsMs
 
+  /* =======================================================
+        Include hotelId in the session so /api/staff and
+        /api/manager handlers can scope data correctly.
+   ======================================================= */
+  const sessionUser = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    hotelId: user.hotelId,
+  }
+
   if (passwordExpired) {
     await replaceUserSession(event, {
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: sessionUser,
       passwordExpired: true,
     })
     return { passwordExpired: true }
   }
 
-  await replaceUserSession(event, {
-    user: { id: user.id, email: user.email, name: user.name, role: user.role },
-  })
+  await replaceUserSession(event, { user: sessionUser })
 
   await prisma.auditLog.create({
     data: { userId: user.id, action: 'LOGIN', ipAddress: getRequestIP(event) },
   })
 
-  return {
-    user: { id: user.id, email: user.email, name: user.name, role: user.role },
-  }
+  return { user: sessionUser }
 })

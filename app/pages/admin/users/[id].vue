@@ -1,11 +1,8 @@
 <script setup lang="ts">
 const { loggedIn, user: currentUser } = useUserSession()
 const route = useRoute()
-const router = useRouter()
 
-if (!loggedIn.value) {
-  navigateTo('/login')
-}
+if (!loggedIn.value) navigateTo('/login')
 
 const id = computed(() => Number(route.params.id))
 
@@ -30,14 +27,10 @@ watch(profile, (p) => {
 }, { immediate: true })
 
 const roles = ['GUEST', 'STAFF', 'MANAGER', 'ADMIN']
-
 const isSelf = computed(() => id.value === currentUser?.id)
 
-const staticHotels = [
-  { id: 1, name: 'Grand London Hotel', city: 'London' },
-  { id: 2, name: 'Paris Luxe Suites', city: 'Paris' },
-  { id: 3, name: 'New York Skyline Inn', city: 'New York' },
-]
+const { data: hotelsData } = await useFetch('/api/hotels')
+const hotels = computed<any[]>(() => hotelsData.value?.hotels ?? [])
 
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -56,12 +49,12 @@ async function onSubmit() {
       phone: state.phone || null,
     }
 
-    if (state.role === 'STAFF') {
+    if (state.role === 'STAFF' || state.role === 'MANAGER') {
       body.hotelId = state.hotelId
     }
 
     await $fetch(`/api/admin/users/${id.value}`, { method: 'PUT', body })
-    successMessage.value = 'User updated'
+    successMessage.value = 'User updated.'
   } catch (err: any) {
     errorMessage.value = err?.statusMessage || err?.message || 'Update failed'
   } finally {
@@ -71,58 +64,59 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div>
-    <div class="mb-6">
-      <UButton color="neutral" variant="ghost" to="/admin/users" icon="i-lucide-arrow-left" label="Back to users" />
+  <div class="max-w-2xl">
+    <header class="mb-6 pb-4 border-b border-(--ui-border)">
+      <NuxtLink to="/admin/users" class="text-xs text-(--ui-text-muted) hover:underline">← Users</NuxtLink>
+      <h1 class="text-2xl font-bold mt-1">Edit user</h1>
+    </header>
+
+    <div v-if="loading" class="flex justify-center py-12">
+      <UIcon name="i-lucide-loader-circle" class="h-6 w-6 animate-spin text-muted" />
     </div>
 
-    <UCard v-if="loading" class="flex justify-center py-12">
-      <UIcon name="i-lucide-loader-circle" class="h-6 w-6 animate-spin text-muted" />
-    </UCard>
-
-    <UCard v-else class="max-w-lg">
-      <template #header>
-        <h1 class="text-xl font-semibold">Edit User</h1>
-      </template>
+    <section v-else>
+      <h2 class="text-sm font-semibold text-(--ui-text-muted) uppercase tracking-wider mb-3">Account details</h2>
 
       <UAlert v-if="successMessage" color="success" variant="subtle" :title="successMessage" class="mb-4" />
       <UAlert v-if="errorMessage" color="error" variant="subtle" :title="errorMessage" class="mb-4" />
 
-      <form class="space-y-4" @submit.prevent="onSubmit">
-        <UFormField label="Name" required>
-          <UInput v-model="state.name" placeholder="Full name" />
-        </UFormField>
+      <div class="border border-(--ui-border) rounded-md bg-(--ui-bg-elevated) p-5">
+        <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
+          <div>
+            <label class="text-xs font-medium text-(--ui-text-muted) block mb-1">Name</label>
+            <UInput v-model="state.name" placeholder="Full name" />
+          </div>
+          <div>
+            <label class="text-xs font-medium text-(--ui-text-muted) block mb-1">Email</label>
+            <UInput v-model="state.email" type="email" />
+          </div>
+          <div>
+            <label class="text-xs font-medium text-(--ui-text-muted) block mb-1">Role</label>
+            <USelect
+              v-model="state.role"
+              :items="roles.map(r => ({ label: r, value: r }))"
+              :disabled="isSelf"
+            />
+            <p v-if="isSelf" class="text-xs text-(--ui-text-muted) mt-1">You cannot change your own role.</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-(--ui-text-muted) block mb-1">Phone</label>
+            <UInput v-model="state.phone" type="tel" />
+          </div>
+          <div v-if="state.role === 'STAFF' || state.role === 'MANAGER'">
+            <label class="text-xs font-medium text-(--ui-text-muted) block mb-1">Managed hotel</label>
+            <USelect
+              v-model="state.hotelId"
+              :items="hotels.map((h: any) => ({ label: `${h.name} (${h.city})`, value: h.id }))"
+              placeholder="Select a hotel"
+            />
+          </div>
 
-        <UFormField label="Email" required>
-          <UInput v-model="state.email" type="email" placeholder="Email address" />
-        </UFormField>
-
-        <UFormField label="Role">
-          <USelect
-            v-model="state.role"
-            :items="roles.map(r => ({ label: r, value: r }))"
-            :disabled="isSelf"
-          />
-          <p v-if="isSelf" class="text-xs text-muted mt-1">You cannot change your own role.</p>
-        </UFormField>
-
-        <UFormField label="Phone">
-          <UInput v-model="state.phone" type="tel" placeholder="Phone number" />
-        </UFormField>
-
-        <UFormField v-if="state.role === 'STAFF'" label="Managed hotel">
-          <USelect
-            v-model="state.hotelId"
-            :items="staticHotels.map(h => ({ label: `${h.name} (${h.city})`, value: h.id }))"
-            placeholder="Select a hotel"
-          />
-          <p class="text-xs text-muted mt-1">
-            Note: Backend hotel assignment is pending implementation.
-          </p>
-        </UFormField>
-
-        <UButton type="submit" label="Save changes" block :loading="submitting" />
-      </form>
-    </UCard>
+          <div class="flex justify-end pt-4 border-t border-(--ui-border)">
+            <UButton type="submit" color="primary" label="Save changes" :loading="submitting" />
+          </div>
+        </form>
+      </div>
+    </section>
   </div>
 </template>

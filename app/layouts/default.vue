@@ -32,7 +32,7 @@ const useMinimal = computed(() => noLayoutPaths.includes(route.path))
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-(--ui-bg)">
     <template v-if="useMinimal">
       <AppNavbar />
       <main class="p-4">

@@ -1,6 +1,54 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/* =======================================================
+        Global font + smoothing.
+        color-scheme tells the browser to render native
+        UI (scrollbars, form controls) in light tones.
+   ======================================================= */
+html {
+  color-scheme: light;
+}
+
 body {
   font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+/* =======================================================
+        Verdan palette — white surfaces with emerald
+        accents. We force light tokens on both :root and
+        .dark so even if the color-mode class slips back
+        in we still render white.
+   ======================================================= */
+:root,
+:root.dark,
+.dark {
+  --ui-bg: #ffffff;
+  --ui-bg-muted: #f8fafc;
+  --ui-bg-elevated: #ffffff;
+  --ui-bg-accented: #f1f5f9;
+  --ui-bg-inverted: #0f172a;
+
+  --ui-border: #e2e8f0;
+  --ui-border-muted: #f1f5f9;
+  --ui-border-accented: #cbd5e1;
+  --ui-border-inverted: #0f172a;
+
+  --ui-text: #0f172a;
+  --ui-text-muted: #64748b;
+  --ui-text-toned: #334155;
+  --ui-text-dimmed: #94a3b8;
+  --ui-text-highlighted: #020617;
+  --ui-text-inverted: #ffffff;
+}
+
+/* =======================================================
+        Print styles for the guest invoice page
+   ======================================================= */
+@media print {
+  body { background: white !important; color: black !important; }
+  nav, aside, header, .print\:hidden { display: none !important; }
 }
