@@ -1,0 +1,52 @@
+================================================================
+        VERDAN HMS — PACKAGE LIST
+================================================================
+
+================================================================
+ JavaScript dependencies  (installed via `bun install`)
+================================================================
+
+  RUNTIME / FRAMEWORK
+    nuxt                          4.4.5
+    vue                           3.5.34
+    vue-router                    5.0.7
+    typescript                    6.0.3
+    tailwindcss                   4.3.0
+
+  UI + STYLING
+    @nuxt/ui                      4.7.1
+    @nuxt/icon                    2.2.2
+    @iconify-json/lucide          1.2.107   (icon set)
+    @nuxt/fonts                   0.14.0
+    @nuxt/image                   2.0.0
+
+  AUTH + SECURITY
+    nuxt-auth-utils               0.5.29
+    bcryptjs                      3.0.3
+    @types/bcryptjs               3.0.0
+    zod                           4.4.3     (form validation)
+
+  DATABASE  (SQLite + Prisma ORM)
+    @prisma/client                7.8.0
+    @prisma/adapter-libsql        7.8.0
+    @libsql/client                0.17.3
+    prisma                        7.8.0     (cli, dev only)
+
+  LINTING / TOOLING
+    @nuxt/eslint                  1.15.2
+    eslint                        10.3.0
+    @nuxt/hints                   1.1.1
+
+  TESTING
+    @nuxt/test-utils              4.0.3
+    @vue/test-utils               2.4.10
+    vitest                        4.1.6
+    happy-dom                     20.9.0
+
+
+================================================================
+ How to reproduce this list
+================================================================
+
+    bun pm ls            # current versions
+    cat package.json     # version constraints

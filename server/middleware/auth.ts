@@ -1,7 +1,10 @@
 import { getRequestIP } from 'h3'
 import prisma from '../utils/prisma'
 
-const PUBLIC_PATHS = ['/api/auth']
+/* =======================================================
+        Paths that skip authentication entirely
+   ======================================================= */
+const PUBLIC_PATHS = ['/api/auth', '/api/hotels', '/api/rooms']
 
 export default defineEventHandler(async (event) => {
   const path = event.path
@@ -22,6 +25,9 @@ export default defineEventHandler(async (event) => {
 
   event.context.user = user
 
+  /* =======================================================
+              Role-based access control
+     ======================================================= */
   if (path.startsWith('/api/admin') && user.role !== 'ADMIN') {
     throw createError({ statusCode: 403, message: 'Admin access required' })
   }
@@ -40,6 +46,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Staff access required' })
   }
 
+  /* =======================================================
+        Audit-log every authenticated API call.
+        Required by coursework spec for security audit.
+   ======================================================= */
   await prisma.auditLog.create({
     data: {
       userId: user.id,

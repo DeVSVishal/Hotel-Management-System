@@ -41,7 +41,16 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     }
 
     await useUserSession().fetch()
-    navigateTo('/')
+
+    /* =======================================================
+              Route each role to its landing page
+       ======================================================= */
+    const role = (res as any).user?.role
+    if (role === 'STAFF' || role === 'MANAGER' || role === 'ADMIN') {
+      navigateTo('/staff/dashboard')
+    } else {
+      navigateTo('/guest/dashboard')
+    }
   } catch (err: any) {
     const status = err?.statusCode || err?.status || 0
     const msg = err?.statusMessage || err?.message || 'An error occurred'

@@ -1,0 +1,147 @@
+================================================================
+        VERDAN HMS — INSTALLATION & LAUNCH INSTRUCTIONS
+================================================================
+
+Verdan HMS is a multi-hotel management platform with four roles
+(Guest, Staff, Manager, Admin), built on Nuxt 4, Vue 3, Nuxt UI v4,
+Prisma 7 and SQLite (via LibSQL), with nuxt-auth-utils for sessions.
+
+
+----------------------------------------------------------------
+ 1.  PREREQUISITES
+----------------------------------------------------------------
+
+Install ONE of the following JavaScript runtimes:
+
+  - Bun 1.3+         (recommended — what we used)
+        https://bun.sh
+  - Node.js 20+      (alternative — every command also works
+                      under Node, just substitute "bun" with
+                      "npm" or "npx")
+        https://nodejs.org
+
+
+----------------------------------------------------------------
+ 2.  FIRST-TIME SETUP  (fresh clone)
+----------------------------------------------------------------
+
+Open a terminal in the project root, then:
+
+    cp .env.example .env
+
+Open the new .env file and replace the placeholder
+NUXT_SESSION_PASSWORD with a random string (any 32+ characters).
+On macOS / Linux you can generate one with:
+
+    openssl rand -base64 32
+
+On Windows you can use any random password generator, or just
+type 32 random characters.
+
+Then install dependencies:
+
+    bun install
+
+This installs node_modules, generates the Prisma client, and runs
+nuxt prepare. First run takes 30 to 60 seconds.
+
+Finally create and seed the database with one command:
+
+    bun run db:setup
+
+This applies the Prisma migrations (creates dev.db with the
+correct schema) and then runs the seed script. You'll see:
+
+    Verdan Hotels — fresh database with realistic test data.
+
+
+----------------------------------------------------------------
+ 3.  START THE APP  (development mode)
+----------------------------------------------------------------
+
+    bun run dev
+
+Open your browser at:
+
+    http://localhost:3000
+
+You should see the Verdan Hotels landing page. Click "Sign In"
+to log in as any account from credentials.txt.
+
+
+----------------------------------------------------------------
+ 4.  LOGGING IN
+----------------------------------------------------------------
+
+Each role lands on a different start page after login:
+
+  Guest    →  /guest/dashboard   (personal bookings + stats)
+  Staff    →  /staff/dashboard   (today's arrivals + departures)
+  Manager  →  /staff/dashboard   (+ Reports / Rates / Staff)
+  Admin    →  /staff/dashboard   (+ Users / Hotels / Audit Logs)
+
+Recommended starter accounts:
+
+  ADMIN     sarah.mitchell@verdan.com  / Admin123!
+  MANAGER   james.anderson@verdan.com  / Manager123!   (London)
+  STAFF     emma.wilson@verdan.com     / Staff123!     (London)
+  GUEST     linda.johnson@gmail.com    / Guest123!     (active)
+
+See credentials.txt for the full list of 18 seeded accounts.
+
+Logout: red "Logout" button in the top-right navbar.
+
+
+----------------------------------------------------------------
+ 5.  COMMON COMMANDS
+----------------------------------------------------------------
+
+  bun run dev          start dev server (hot-reload)
+  bun run build        production build → .output/
+  node .output/server/index.mjs    run the production build
+  bun run db:seed      wipe & repopulate the database
+  bun run db:setup     apply migrations + seed (used on
+                       a fresh clone)
+  bun run db:studio    open Prisma Studio (visual DB browser)
+  bun run test:unit    run the unit-test suite (Vitest)
+  bun run test:nuxt    run the component-test suite
+
+
+----------------------------------------------------------------
+ 6.  RESTORING THE PROVIDED DATABASE DUMP  (alternative to seeding)
+----------------------------------------------------------------
+
+A pre-exported SQL dump is included at prisma/dump.sql. If you
+prefer to restore it directly instead of regenerating via the
+seed script, install the sqlite3 CLI and run:
+
+    rm -f dev.db
+    sqlite3 dev.db < prisma/dump.sql
+
+This recreates an identical database without running the seed.
+Either approach (db:setup or restoring dump.sql) produces the
+same dataset.
+
+
+----------------------------------------------------------------
+ 7.  TROUBLESHOOTING
+----------------------------------------------------------------
+
+  Page shows "Failed to fetch" or blank
+    → Confirm `bun run dev` is still running.
+    → Hard-refresh the browser (Ctrl+Shift+R).
+
+  Login says "Account locked"
+    → Five wrong passwords in a row lock the account for 15
+       minutes. Either wait or re-run `bun run db:seed` to
+       reset everyone.
+
+  "Cannot find module './generated/prisma/client'"
+    → Run `bunx prisma generate` (also runs automatically on
+       `bun install`).
+
+  Dark background despite white theme
+    → Hard-refresh, then clear localStorage in browser console:
+          localStorage.clear(); location.reload()
+
+================================================================

@@ -100,10 +100,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
         <ul v-if="state.newPassword" class="space-y-1 text-sm">
           <li v-for="check in checks" :key="check.label" class="flex items-center gap-2">
-            <span :class="check.pass ? 'text-green-600' : 'text-gray-400'">
+            <span :class="check.pass ? 'text-(--ui-success)' : 'text-(--ui-text-dimmed)'">
               {{ check.pass ? '✓' : '○' }}
             </span>
-            <span :class="check.pass ? 'text-green-700' : 'text-gray-500'">
+            <span :class="check.pass ? 'text-(--ui-text)' : 'text-muted'">
               {{ check.label }}
             </span>
           </li>

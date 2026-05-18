@@ -9,16 +9,23 @@ export default defineEventHandler(async (event) => {
 
   const { name, phone, password, currentPassword } = await readBody(event)
 
+  const existing = await prisma.user.findUnique({ where: { id } })
+  if (!existing) {
+    throw createError({ statusCode: 404, statusMessage: 'User not found' })
+  }
+
   const data: Record<string, unknown> = {}
   if (name !== undefined) data.name = name
   if (phone !== undefined) data.phone = phone
 
   if (password) {
-    if (currentPassword) {
-      const valid = await verifyPassword(user.passwordHash, currentPassword)
-      if (!valid) {
-        throw createError({ statusCode: 400, statusMessage: 'Current password is incorrect' })
-      }
+    if (!currentPassword) {
+      throw createError({ statusCode: 400, statusMessage: 'Current password is required to set a new password' })
+    }
+
+    const valid = await verifyPassword(existing.passwordHash, currentPassword)
+    if (!valid) {
+      throw createError({ statusCode: 400, statusMessage: 'Current password is incorrect' })
     }
 
     const validation = validatePassword(password)
@@ -29,11 +36,11 @@ export default defineEventHandler(async (event) => {
     data.passwordChangedAt = new Date()
   }
 
-  const user = await prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id },
     data,
   })
 
-  const { passwordHash, ...profile } = user
+  const { passwordHash: _ph, ...profile } = updated
   return { user: profile }
 })
